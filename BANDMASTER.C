@@ -1,20 +1,3 @@
-/*
-
-v0.9.2 28.06.2013
- * PTT press finish band out delay timer
- * Chenged key press detection behaviour
-   (press event generated after defined time, not after releasing key)
-
-v0.9.1 26.06.2013
- * changed MAX_PROFILES to 1
- * added configurable delay before switching BAND OUT data
-
-v0.9 configured outputs for SP2YWL club
-*/
-
-// TODO
-// serial programming
-
 #include "bm_uc_cfg.h"
 #include "bm_config_data.h"
 #include "bm_init.h"
