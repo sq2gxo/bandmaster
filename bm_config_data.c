@@ -212,7 +212,9 @@ void readEEConfigProfile(uint8_t pr_Id)
 	BandOutVal = BandSelected;
 	BandDecode_Mode = eeprom_read_byte(&EE_BandDecode_Mode);
 	
-	// sanity check
+	
+	// Config sanity check
+	// --------------------------------------
 	
 	if (BandSelected > BAND_MAX)
 	{
@@ -244,6 +246,15 @@ void readEEConfigProfile(uint8_t pr_Id)
 			bm_cfg.AntSelBandCfg[i] = NO_ANTENNA;
 		}
 	}
+
+	// Confirm ant names closing '\0'
+	for (uint8_t i = 0; i < MAX_ANT_TOTAL; i++)
+	{
+		bm_cfg.AntLongNames[i][ANT_LONG_NAME_LEN] = '\0';
+		bm_cfg.AntShortNames[i][ANT_SHORT_NAME_LEN] = '\0';
+	}
+	bm_cfg.ProfileName[PROFILE_NAME_LEN] = '\0';
+
 }
 
 // Update static config from RAM to EEPROM
