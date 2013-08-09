@@ -85,5 +85,6 @@ void updateCurrentEEConfig();
 
 uint8_t isPeerBand();
 uint8_t isPeerAntConflict(uint8_t antId);
+uint8_t isPermanentPttLock();
 
 #endif

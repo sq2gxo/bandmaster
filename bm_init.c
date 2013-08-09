@@ -44,7 +44,13 @@ void initTIMER()
 	TCCR1B |= (1 << WGM12 ); // Configure timer 1 for CTC mode
 	TIMSK |= (1 << OCIE1A ); // Enable CTC interrupt
 	sei (); // Enable global interrupts
-	OCR1A = 49999; // Set CTC compare value to 100Hz at 4MHz AVR clock
+	OCR1A = 39999; // Set CTC compare value to 100Hz at 4MHz AVR clock
+	// Target Timer Count = (1 / Target Frequency) / (1 / Timer Clock Frequency) - 1
+	//             = (1 / 100) / (1 / 1000000) - 1
+    //             = .001 / 0.00000025 - 1
+    //             = 40000 - 1
+    //             = 39999 
+	//
 	TCCR1B |= (1 << CS10 ); // Start timer at Fcpu
 
 }

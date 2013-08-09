@@ -1,4 +1,7 @@
-v0.9.3 28.07.2013
+v0.9.4 27.07.2013
+ * fix error with switching PA out when permanent PTT lock active
+
+v0.9.3 28.06.2013
  * fix error with getting auto band (ADC threshold)
  * secure configuration reading and prevent against junk eeprom data
 

@@ -1,3 +1,4 @@
+
 #include "bm_timer.h"
 #include "bm_output.h"
 #include "bm_serial.h"
@@ -58,11 +59,20 @@ void blockPTT()
 
 void unblockPTT()
 {
-	// do not unblock if PTT is locked timed
-	if (ptt_lock_timed == 1)
+	// do not unblock if PTT is locked timed or PTT lock is permanent
+	uint8_t permanentPttLock = isPermanentPttLock();
+	if (permanentPttLock == 1)
 	{
+		blockPTT();
 		return;
 	}
+
+	if (ptt_lock_timed == 1)
+	{
+		blockPTT();
+		return;
+	}
+
 	PORTC &= 0b11110111;
 }
 
@@ -154,14 +164,7 @@ void applyOutPins()
 
 void applyPttStatus()
 {
-	uint8_t antId = bm_cfg.AntSelBandCfg[BandSelected];
-	uint8_t permanentPttLock = 0;
-	if ((antId == NO_ANTENNA)
-		|| (isPeerBand())
-		|| (isPeerAntConflict(antId)))
-	{
-		permanentPttLock = 1;
-	}
+	uint8_t permanentPttLock = isPermanentPttLock();
 
 	if (permanentPttLock == 0)
 	{
@@ -169,7 +172,6 @@ void applyPttStatus()
 	}
 	else
 	{
-		stopPttLockTimed();
 		blockPTT();
 	}
 }

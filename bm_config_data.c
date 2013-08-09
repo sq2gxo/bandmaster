@@ -8,7 +8,7 @@ bm_config_t bm_cfg;
 bm_config_t EEMEM cfg[MAX_PROFILES] = 
 {
 	{
-		{'S', 'T', 'N', ' ', 'A', 0, 0},
+		{'S', 'T', 'N', ' ', 'B', 0, 0},
 
 		{
 		{'V', 'E', 'R', 'T',   0, 0},
@@ -312,4 +312,17 @@ uint8_t isPeerAntConflict(uint8_t antId)
 		return 0;
 	}
 	return bm_cfg.AntOutCfg[antId] & PeerAntCfg;
+}
+
+uint8_t isPermanentPttLock()
+{
+	uint8_t antId = bm_cfg.AntSelBandCfg[BandSelected];
+
+	if ((antId == NO_ANTENNA)
+		|| (isPeerBand())
+		|| (isPeerAntConflict(antId)))
+	{
+		return 1;
+	}
+	return 0;
 }
