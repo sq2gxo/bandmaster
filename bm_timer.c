@@ -74,6 +74,8 @@ void doTimerInterrupt()
 			disableLinkLED();
 			link_active = 0;
 			refresh_ptt_needed = 1;
+			// set serial mode to default
+			serial_mode = DEVICE2DEVICE;
 		}
 	}
 	// if needed - send serial byte from buffer

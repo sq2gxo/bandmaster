@@ -9,6 +9,12 @@
 #include <stdint.h>
 
 typedef enum {
+    DEVICE2DEVICE,
+    PC_PROGRAM,
+    PC_CONTROL,
+} serial_mode_t;
+
+typedef enum {
     DEVICE,
     PC,
     CONTROLLER,
@@ -27,10 +33,15 @@ typedef enum {
 	NUM_MSG_TYPES
 } msg_type_t;
 
+extern serial_mode_t serial_mode;
 
 void doSerialInterrupt();
 
 void serial_push_byte_out();
+
+void serial_direct_send_byte(uint8_t byte);
+
+void serial_clear_buffer();
 
 void sendSerialMessage(const char* msg);
 
@@ -43,6 +54,8 @@ uint8_t getHexdigit(uint8_t data4bit);
 void processSerialMsg();
 
 void processDeviceMsg(msg_type_t msgType);
+
+void processPCMsg(msg_type_t msgType);
 
 uint8_t getValIdx(const unsigned char val, const unsigned char* arr, uint8_t size);
 
