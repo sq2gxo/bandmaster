@@ -186,10 +186,6 @@ void processSerialMsg()
 				serial_mode = PC_PROGRAM;
 				processPCMsg(msgType);
 				break;
-			case CONTROLLER:
-				serial_mode = PC_CONTROL;
-				processPCMsg(msgType);
-				break;
 			default:
 				msgValid = 0;
 				break;
@@ -283,15 +279,11 @@ void processPCMsg(msg_type_t msgType)
 	}
 	else if (msgType == WRITE_REQUEST)
 	{
-	// TODO
-	}
-	else if (msgType == APPLY)
-	{
+	    // TODO
 		// write current config to EEPROM
 		updateStaticEEConfig(profile_Id);
 		// TODO send response DO
 	}
-	
 }
 
 uint8_t getValIdx(const unsigned char val, const unsigned char* arr, uint8_t size)
