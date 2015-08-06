@@ -20,4 +20,4 @@ const char* const m1_man_mode =  "MANUAL MODE";
 const char* const m_empty =      "";
 
 const char* const m1_splash =    "BandMaster";
-const char* const m2_splash =    "v0.9.4 by SQ2GXO";
+const char* const m2_splash =    "v0.9.5 by SQ2GXO";

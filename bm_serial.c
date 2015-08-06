@@ -12,6 +12,8 @@
 
 uint8_t needOutUpdate = 0;
 
+serial_mode_t serial_mode = DEVICE2DEVICE;
+
 const unsigned char msg_sender_val[NUM_SENDER_TYPES] =
 {
     'D',  //DEVICE,
@@ -96,6 +98,20 @@ void serial_push_byte_out()
 	}
 }
 
+void serial_direct_send_byte(uint8_t byte)
+{
+	while ((UCSRA & (1 << UDRE)) == 0) {}; // Do nothing until UDR is ready for more data to be written to it
+	UDR = byte; // send byte
+}
+
+void serial_clear_buffer()
+{
+	do
+	{
+		serial_push_byte_out();
+	}
+	while (send_buf_size > 0);
+}
 
 void sendSerialMessage(const char* msg)
 {
@@ -135,7 +151,11 @@ void reportBandAntSerial()
 		BandSelected,
 		antBits);
 
-	sendSerialMessage(msg);
+	// only send in device to device mode
+	if (serial_mode == DEVICE2DEVICE)
+	{
+		sendSerialMessage(msg);
+	}
 }
 
 
@@ -159,7 +179,12 @@ void processSerialMsg()
 		switch (sender)
 		{
 			case DEVICE:
+				serial_mode = DEVICE2DEVICE;
 				processDeviceMsg(msgType);
+				break;
+			case PC:
+				serial_mode = PC_PROGRAM;
+				processPCMsg(msgType);
 				break;
 			default:
 				msgValid = 0;
@@ -212,6 +237,53 @@ void processDeviceMsg(msg_type_t msgType)
 
 	}
 	
+}
+
+void processPCMsg(msg_type_t msgType)
+{
+	serial_clear_buffer();
+	ATOMIC_BLOCK(ATOMIC_FORCEON)
+	{
+		enableLinkTimer();
+		link_active = 1;
+
+	}
+
+	if (msgType == READ_REQUEST)
+	{
+		// check size - should be total = 2
+		uint8_t len = strLen((char *)msg_buf);
+		if (len != 2)
+		{
+			return;
+		}
+
+		// Disable device status reporting / interrupts		
+		ATOMIC_BLOCK(ATOMIC_FORCEON)
+		{
+			//** send_buf array
+
+			// send short antenna names
+			for (uint8_t i = 0; i < MAX_ANT_TOTAL; i++)
+			{
+				//Device send data:
+				//DC[p][t][idx][bbbbbbb]\n (variable len)
+				//p - profile ID (hex 0 or 1)
+				//t - config data type [N, S, A, B, P, L, T]
+				//[idx] optional data index
+				// TODO prepareCfgMsg(profile, DATA_ANT_SHORT_NAME, i, shortname);
+			}
+
+			// send confirmation
+		}
+	}
+	else if (msgType == WRITE_REQUEST)
+	{
+	    // TODO
+		// write current config to EEPROM
+		updateStaticEEConfig(profile_Id);
+		// TODO send response DO
+	}
 }
 
 uint8_t getValIdx(const unsigned char val, const unsigned char* arr, uint8_t size)
