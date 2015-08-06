@@ -3,6 +3,6 @@
 
 #include <stdint.h>
 
-uint8_t strLen(const char* str);
+uint16_t strLen(const char* str);
 
 #endif

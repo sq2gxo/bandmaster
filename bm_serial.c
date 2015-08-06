@@ -1,4 +1,5 @@
 #include <avr/io.h>
+#include <avr/wdt.h>
 #include <util/atomic.h>
 #include "bm_config_data.h"
 
@@ -17,39 +18,33 @@ serial_mode_t serial_mode = DEVICE2DEVICE;
 const unsigned char msg_sender_val[NUM_SENDER_TYPES] =
 {
     'D',  //DEVICE,
-	'P',  //PC,
-	'C',  //CONTROLLER,
-	' '   //UNKNOWN,
+	'P'   //PC,
 };
 
 const unsigned char msg_type_val[NUM_MSG_TYPES] =
 {
     'S', //STATUS,
-    'C', //CONFIG,
     'R', //READ_REQUEST,
-	'W', //WRITE_REQUEST,
-	'O', //OK,
-	'A', //APPLY,
-	' '  //INVALID,
+	'W'  //WRITE_REQUEST,
 };
 
 
 
-uint8_t send_buf[SER_BUF_SIZE];
-uint8_t send_buf_idx = 0;
+uint8_t send_buf[SER_TRANSMIT_BUF_SIZE];
+uint16_t send_buf_idx = 0;
 uint8_t send_buf_size = 0;
 
-uint8_t rcv_buf[SER_BUF_SIZE];
-uint8_t rcv_buf_idx = 0;
+uint8_t rcv_buf[SER_RX_BUF_SIZE];
+uint16_t rcv_buf_idx = 0;
 
-uint8_t msg_buf[SER_BUF_SIZE];
+uint8_t msg_buf[SER_RX_BUF_SIZE];
 uint8_t rcv_msg_ready = 0;
 
 void doSerialInterrupt()
 {
 	char ReceivedByte;
 	ReceivedByte = UDR;
-	if (rcv_buf_idx >= SER_BUF_SIZE)
+	if (rcv_buf_idx >= SER_RX_BUF_SIZE)
 	{
 		return;
 	}
@@ -60,7 +55,7 @@ void doSerialInterrupt()
 		if (rcv_msg_ready == 0)
 		{
 			// Copy
-			for (uint8_t i = 0; i < rcv_buf_idx; i++)
+			for (uint16_t i = 0; i < rcv_buf_idx; i++)
 			{
 				msg_buf[i] = rcv_buf[i];
 			}
@@ -72,7 +67,7 @@ void doSerialInterrupt()
 	}
 
 	// overflow scenario
-	if (rcv_buf_idx >= SER_BUF_SIZE)
+	if (rcv_buf_idx >= SER_RX_BUF_SIZE)
 	{
 		rcv_buf_idx = 0;
 	}
@@ -121,7 +116,7 @@ void sendSerialMessage(const char* msg)
 	// compare with buffer available
 	ATOMIC_BLOCK(ATOMIC_FORCEON)
 	{
-		if (size < (SER_BUF_SIZE - send_buf_size))
+		if (size < (SER_TRANSMIT_BUF_SIZE - send_buf_size))
 		{
 			// copy data to buffer
 			for (uint8_t i = 0; i < size; i++)
@@ -163,7 +158,7 @@ void processSerialMsg()
 {
 	if (rcv_msg_ready)
 	{
-		uint8_t len = strLen((char *)msg_buf);
+		uint16_t len = strLen((char *)msg_buf);
 		if (len < 2)
 		{
 			rcv_msg_ready = 0;
@@ -249,6 +244,9 @@ void processPCMsg(msg_type_t msgType)
 
 	}
 
+	serial_direct_send_byte('1');
+	serial_direct_send_byte('\n');
+
 	if (msgType == READ_REQUEST)
 	{
 		// check size - should be total = 2
@@ -257,32 +255,61 @@ void processPCMsg(msg_type_t msgType)
 		{
 			return;
 		}
-
+		char hexByteStr[3];
+		uint8_t* cfgPtr = (uint8_t*)&bm_cfg;
 		// Disable device status reporting / interrupts		
 		ATOMIC_BLOCK(ATOMIC_FORCEON)
 		{
-			//** send_buf array
-
-			// send short antenna names
-			for (uint8_t i = 0; i < MAX_ANT_TOTAL; i++)
+			// convert each byte of cfg struct to hex and send
+			for (uint16_t byteIdx = 0; byteIdx < sizeof(bm_config_t); ++byteIdx)
 			{
-				//Device send data:
-				//DC[p][t][idx][bbbbbbb]\n (variable len)
-				//p - profile ID (hex 0 or 1)
-				//t - config data type [N, S, A, B, P, L, T]
-				//[idx] optional data index
-				// TODO prepareCfgMsg(profile, DATA_ANT_SHORT_NAME, i, shortname);
+				snprintf(hexByteStr, 3, "%02hhX", cfgPtr[byteIdx]);
+				serial_direct_send_byte(hexByteStr[0]);
+				serial_direct_send_byte(hexByteStr[1]);
 			}
-
-			// send confirmation
+			
+			// send endline
+			serial_direct_send_byte('\n');
 		}
 	}
 	else if (msgType == WRITE_REQUEST)
 	{
-	    // TODO
-		// write current config to EEPROM
-		updateStaticEEConfig(profile_Id);
-		// TODO send response DO
+		// check size - should be total = 520
+		uint16_t len = strLen((char *)msg_buf);
+		if (len != (2 + 520))
+		{
+			return;
+		}
+
+		uint8_t* cfgPtr = (uint8_t*)&bm_cfg;
+		char hexByteStr[3];
+		hexByteStr[2] = '\0';
+		ATOMIC_BLOCK(ATOMIC_FORCEON)
+		{
+			// convert each byte of cfg struct to hex and send
+			for (uint16_t byteIdx = 0; byteIdx < sizeof(bm_config_t); ++byteIdx)
+			{
+				// skipping first two bytes: PW
+				hexByteStr[0] = msg_buf[2 * byteIdx + 2];
+				hexByteStr[1] = msg_buf[2 * byteIdx + 3];
+				uint8_t parsedCount = sscanf(hexByteStr, "%02hhX", &(cfgPtr[byteIdx]));
+				if (parsedCount != 1)
+				{
+					// Invalid input - break and return
+					return;
+				}
+			}
+			// write current config to EEPROM
+			updateStaticEEConfig(profile_Id);
+			// reset by watchdog abuse
+			do    
+			{                           
+    			wdt_enable(WDTO_15MS);  
+    			for(;;)                 
+    			{                       
+    			}                       
+			} while(0);
+		}
 	}
 }
 
